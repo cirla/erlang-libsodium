@@ -20,6 +20,7 @@
 -export([bin2hex/1]).
 -export([hex2bin/1]).
 -export([hex2bin/2]).
+-export([memzero/1]).
 
 %% Internal API
 -export([call/1]).
@@ -59,6 +60,10 @@ hex2bin(Hex, Ignore)
 		when is_binary(Hex)
 		andalso is_binary(Ignore) ->
 	call(hex2bin, {Hex, Ignore}).
+
+memzero(N)
+		when is_binary(N) ->
+	call(memzero, {N})
 
 %%%-------------------------------------------------------------------
 %%% Internal functions

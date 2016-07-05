@@ -15,6 +15,8 @@ static int	LS_API_INIT(utils, bin2hex);
 static void	LS_API_EXEC(utils, bin2hex);
 static int	LS_API_INIT(utils, hex2bin);
 static void	LS_API_EXEC(utils, hex2bin);
+static int	LS_API_INIT(utils, memzero);
+static void	LS_API_EXEC(utils, memzero);
 
 libsodium_function_t	libsodium_functions_utils[] = {
 	LS_API_R_ARGV(utils, compare, 2),
@@ -23,6 +25,7 @@ libsodium_function_t	libsodium_functions_utils[] = {
 	LS_API_R_ARGV(utils, add, 2),
 	LS_API_R_ARGV(utils, bin2hex, 1),
 	LS_API_R_ARGV(utils, hex2bin, 2),
+	LS_API_R_ARGV(utils, memzero, 1),
 	{NULL}
 };
 
@@ -484,3 +487,63 @@ LS_API_EXEC(utils, hex2bin)
 		(void) sodium_memzero(bin, bin_len);
 	}
 }
+
+/* utils_memzero/1 */
+
+typedef struct LS_API_F_ARGV(utils, memzero) {
+	const unsigned char	*n;
+	size_t			nlen;
+} LS_API_F_ARGV_T(utils, memzero);
+
+static int
+LS_API_INIT(utils, memzero)
+{
+	LS_API_F_ARGV_T(utils, memzero) *argv;
+	int type;
+	int type_length;
+	ErlDrvSizeT x;
+	void *p;
+
+	if (ei_get_type(buffer, index, &type, &type_length) < 0
+			|| type != ERL_BINARY_EXT) {
+		return -1;
+	}
+
+	x = (ErlDrvSizeT)(type_length + (sizeof (LS_API_F_ARGV_T(utils, memzero))));
+	p = (void *)(driver_alloc(x));
+
+	if (p == NULL) {
+		return -1;
+	}
+
+	argv = (LS_API_F_ARGV_T(utils, memzero) *)(p);
+	p += (sizeof (LS_API_F_ARGV_T(utils, memzero)));
+	argv->n = (unsigned char *)(p);
+
+	if (ei_decode_binary(buffer, index, (void *)(argv->n), (long *)&(argv->nlen)) < 0) {
+		(void) driver_free(argv);
+		return -1;
+	}
+
+	request->argv = (void *)(argv);
+
+	return 0;
+}
+
+static void
+LS_API_EXEC(utils, memzero)
+{
+	LS_API_F_ARGV_T(utils, memzero) *argv;
+	LS_API_READ_ARGV(utils, memzero);
+
+	(void) sodium_memzero(argv->n, argv->nlen);
+
+	ErlDrvTermData spec[] = {
+		LS_RES_TAG(request),
+		ERL_DRV_BUF2BINARY, (ErlDrvTermData)(argv->n), argv->nlen,
+		ERL_DRV_TUPLE, 2
+	};
+
+	LS_RESPOND(request, spec, __FILE__, __LINE__);
+}
+
